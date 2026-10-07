@@ -1,0 +1,21 @@
+# Maintainer: openOODA-tools <ops@openooda.org>
+pkgname=oogitdiff-bin
+_pkgname=oogitdiff
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Fast working tree vs commit object differ without requiring ambient git porcelain."
+arch=('x86_64')
+url="https://github.com/openOODA-tools/oogitdiff"
+license=('Apache-2.0')
+depends=('glibc')
+provides=('oogitdiff')
+conflicts=('oogitdiff')
+source_x86_64=("${url}/releases/download/v${pkgver}/oogitdiff-linux-x86_64"
+               "uninstall.sh::https://raw.githubusercontent.com/openOODA-tools/${_pkgname}/v${pkgver}/uninstall.sh")
+sha256sums_x86_64=('SKIP'
+                   'SKIP')
+
+package() {
+    install -Dm755 "${srcdir}/oogitdiff-linux-x86_64" "${pkgdir}/usr/bin/oogitdiff"
+    install -Dm755 uninstall.sh "${pkgdir}/usr/bin/oogitdiff-uninstall"
+}
