@@ -1,0 +1,62 @@
+// # Git Diff Demo Showcase Generator
+//
+// Logline: Synthesizes rich multi-scenario repository deltas demonstrating gitdiff capabilities.
+//
+// Setup: Pure synthetic scenario builder showing modified, added, and deleted file diffs.
+//
+// Beats:
+//   1. Build synthetic file deltas across multiple realistic repository scenarios.
+//   2. Demonstrate unified diff patches with colorized insertions and removals.
+//   3. Demonstrate tabular diffstat summary with proportional +/- histogram bars.
+//   4. Format comprehensive interactive showcase output for terminal presentation.
+
+import "core/git_types.oo";
+import "core/diff_engine.oo";
+import "render_patch.oo";
+import "render_stat.oo";
+
+pub fn generate_demo_files() -> List[GitFileDiff] {
+    let mut files: List[GitFileDiff] = list_new();
+
+    // File 1: Modified openOODA subsystem (core/dispatch.oo)
+    let old_dispatch: String = "// Old dispatch\nfn process(id: Int) -> Bool {\n    if id < 0 {\n        return false;\n    }\n    return true;\n}";
+    let new_dispatch: String = "// New sovereign capability-bounded dispatch\nfn process(cap: &ProcessCap, id: Int) -> Bool {\n    if id < 0 {\n        return false;\n    }\n    log_event(cap, id);\n    return true;\n}";
+    let f1: GitFileDiff = compute_file_diff("src/core/dispatch.oo", old_dispatch, new_dispatch, "a1b2c3d", "e5f6a7b", "M");
+    files = list_push(files, f1);
+
+    // File 2: Added architecture documentation (docs/sovereign_spec.md)
+    let old_doc: String = "";
+    let new_doc: String = "# Sovereign Spec v0.2.0\n\n100% pure native openOODA implementation.\nZero ambient authority.\nTri-distribution packaging.\n";
+    let f2: GitFileDiff = compute_file_diff("docs/sovereign_spec.md", old_doc, new_doc, "0000000", "3c4d5e6", "A");
+    files = list_push(files, f2);
+
+    // File 3: Deleted obsolete legacy wrapper (legacy/ambient_shim.sh)
+    let old_shim: String = "#!/bin/sh\n# Deprecated ambient wrapper\nexec /usr/bin/git diff \"$@\"\n";
+    let new_shim: String = "";
+    let f3: GitFileDiff = compute_file_diff("legacy/ambient_shim.sh", old_shim, new_shim, "9f8e7d6", "0000000", "D");
+    files = list_push(files, f3);
+
+    return files;
+}
+
+pub fn render_demo_showcase(use_color: Bool) -> String {
+    let demo_files: List[GitFileDiff] = generate_demo_files();
+    let stat: GitDiffStat = accumulate_diffstat(demo_files);
+
+    let mut out: String = "";
+    out = out + "==============================================================================\n";
+    out = out + " oogitdiff Sovereign Git Tree Differ — Interactive Demonstration Showcase\n";
+    out = out + "==============================================================================\n\n";
+
+    out = out + "--- [1/2] Diffstat Summary & Proportional Histogram ---\n";
+    out = out + render_diffstat(stat) + "\n";
+
+    out = out + "--- [2/2] Standard Unified Diff Patches ---\n";
+    out = out + render_all_patches(demo_files, use_color) + "\n";
+
+    out = out + "==============================================================================\n";
+    out = out + " Status: Pure native openOODA git delta verified with zero ambient porcelain.\n";
+    out = out + "==============================================================================\n";
+
+    return out;
+}

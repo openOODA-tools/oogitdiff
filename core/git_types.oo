@@ -1,0 +1,114 @@
+// # Git Diff Data Types
+//
+// Logline: Foundational data structures representing git repository deltas, hunks, and stats.
+//
+// Setup: Pure type declarations and immutable model builders for git differences.
+//
+// Beats:
+//   1. Declare line-level edit operation types and hunk representations.
+//   2. Define file-level git delta models with SHA references and change status.
+//   3. Define repository metadata and aggregate diffstat accumulators.
+//   4. Provide pure constructor helpers for file and line delta models.
+
+pub type GitDiffLine = struct {
+    line_type: Int,
+    content: String,
+    old_num: Int,
+    new_num: Int
+};
+
+pub type GitDiffHunk = struct {
+    old_start: Int,
+    old_count: Int,
+    new_start: Int,
+    new_count: Int,
+    lines: List[GitDiffLine]
+};
+
+pub type GitFileDiff = struct {
+    path: String,
+    old_mode: String,
+    new_mode: String,
+    old_sha: String,
+    new_sha: String,
+    status: String,
+    additions: Int,
+    deletions: Int,
+    hunks: List[GitDiffHunk]
+};
+
+pub type GitDiffStat = struct {
+    total_files: Int,
+    total_additions: Int,
+    total_deletions: Int,
+    files: List[GitFileDiff]
+};
+
+pub type GitRepoInfo = struct {
+    root_path: String,
+    head_ref: String,
+    head_commit: String,
+    is_git_repo: Bool
+};
+
+pub fn make_diff_line(l_type: Int, text: String, o_num: Int, n_num: Int) -> GitDiffLine {
+    return GitDiffLine {
+        line_type: l_type,
+        content: text,
+        old_num: o_num,
+        new_num: n_num
+    };
+}
+
+pub fn make_diff_hunk(o_s: Int, o_c: Int, n_s: Int, n_c: Int, lns: List[GitDiffLine]) -> GitDiffHunk {
+    return GitDiffHunk {
+        old_start: o_s,
+        old_count: o_c,
+        new_start: n_s,
+        new_count: n_c,
+        lines: lns
+    };
+}
+
+pub fn make_file_diff(
+    p: String,
+    o_m: String,
+    n_m: String,
+    o_s: String,
+    n_s: String,
+    st: String,
+    adds: Int,
+    dels: Int,
+    hnks: List[GitDiffHunk]
+) -> GitFileDiff {
+    return GitFileDiff {
+        path: p,
+        old_mode: o_m,
+        new_mode: n_m,
+        old_sha: o_s,
+        new_sha: n_s,
+        status: st,
+        additions: adds,
+        deletions: dels,
+        hunks: hnks
+    };
+}
+
+pub fn make_empty_stat() -> GitDiffStat {
+    let empty_list: List[GitFileDiff] = list_new();
+    return GitDiffStat {
+        total_files: 0,
+        total_additions: 0,
+        total_deletions: 0,
+        files: empty_list
+    };
+}
+
+pub fn make_repo_info(root: String, ref_str: String, commit_str: String, is_repo: Bool) -> GitRepoInfo {
+    return GitRepoInfo {
+        root_path: root,
+        head_ref: ref_str,
+        head_commit: commit_str,
+        is_git_repo: is_repo
+    };
+}

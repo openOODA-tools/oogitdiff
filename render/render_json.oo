@@ -1,0 +1,78 @@
+// # Git Diff JSON Serializer
+//
+// Logline: Formats git deltas, hunks, diffstats, and status into structured JSON for CLI and MCP.
+//
+// Setup: Pure JSON string encoder with field escaping and schema compliance.
+//
+// Beats:
+//   1. Escape quotation marks and special control characters in text paths and lines.
+//   2. Serialize hunk coordinates and line delta arrays into JSON objects.
+//   3. Serialize file delta records with status, additions, and deletions.
+//   4. Build composite JSON payloads for diffstat metrics and repository summaries.
+
+import "core/git_types.oo";
+
+fn json_escape(s: String) -> String {
+    let length: Int = chars_len(s);
+    let mut out: String = "";
+    let mut i: Int = 0;
+
+    while i < length {
+        let ch: String = str_slice(s, i, i + 1);
+        if ch == "\"" {
+            out = out + "\\\"";
+        } else if ch == "\\" {
+            out = out + "\\\\";
+        } else if ch == "\n" {
+            out = out + "\\n";
+        } else if ch == "\t" {
+            out = out + "\\t";
+        } else {
+            out = out + ch;
+        }
+        i = i + 1;
+    }
+    return out;
+}
+
+pub fn file_diff_to_json(f: GitFileDiff) -> String {
+    let mut out: String = "{\"path\":\"" + json_escape(f.path) + "\"";
+    out = out + ",\"status\":\"" + f.status + "\"";
+    out = out + ",\"old_mode\":\"" + f.old_mode + "\"";
+    out = out + ",\"new_mode\":\"" + f.new_mode + "\"";
+    out = out + ",\"old_sha\":\"" + f.old_sha + "\"";
+    out = out + ",\"new_sha\":\"" + f.new_sha + "\"";
+    out = out + ",\"additions\":" + f.additions.to_string();
+    out = out + ",\"deletions\":" + f.deletions.to_string();
+    out = out + ",\"hunks_count\":" + list_len(f.hunks).to_string() + "}";
+    return out;
+}
+
+pub fn diffstat_to_json(stat: GitDiffStat) -> String {
+    let mut out: String = "{\"total_files\":" + stat.total_files.to_string();
+    out = out + ",\"total_additions\":" + stat.total_additions.to_string();
+    out = out + ",\"total_deletions\":" + stat.total_deletions.to_string();
+    out = out + ",\"files\":[";
+
+    let count: Int = list_len(stat.files);
+    let mut i: Int = 0;
+    while i < count {
+        if i > 0 {
+            out = out + ",";
+        }
+        let f: GitFileDiff = list_get(stat.files, i);
+        out = out + file_diff_to_json(f);
+        i = i + 1;
+    }
+    out = out + "]}";
+    return out;
+}
+
+pub fn repo_status_to_json(repo: GitRepoInfo, stat: GitDiffStat) -> String {
+    let mut out: String = "{\"repository\":{\"root\":\"" + json_escape(repo.root_path) + "\"";
+    out = out + ",\"head_ref\":\"" + json_escape(repo.head_ref) + "\"";
+    out = out + ",\"head_commit\":\"" + json_escape(repo.head_commit) + "\"";
+    out = out + ",\"is_git_repo\":" + (if repo.is_git_repo { "true" } else { "false" }) + "}";
+    out = out + ",\"diffstat\":" + diffstat_to_json(stat) + "}";
+    return out;
+}

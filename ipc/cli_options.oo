@@ -1,0 +1,111 @@
+// # Command-Line Options Parser
+//
+// Logline: Decodes CLI flags, modes, switches, and positional file/ref target arguments.
+//
+// Setup: Pure argument tokenizer supporting POSIX flags, unified formats, and MCP switches.
+//
+// Beats:
+//   1. Define structured CliOptions configuration type.
+//   2. Parse help, version, format switches (--stat, --name-status, --patch).
+//   3. Parse staging flags (--staged, --cached) and color control flags.
+//   4. Format standardized usage documentation and version text banners.
+
+pub type CliOptions = struct {
+    show_help: Bool,
+    show_version: Bool,
+    show_mcp: Bool,
+    show_demo: Bool,
+    show_stat: Bool,
+    show_name_status: Bool,
+    show_patch: Bool,
+    json_output: Bool,
+    staged_only: Bool,
+    use_color: Bool,
+    run_test: Bool,
+    targets: List[String]
+};
+
+pub fn render_cli_help() -> String {
+    return "oogitdiff 0.2.0 (openOODA sovereign git tree diff & comparison)\n"
+        + "usage: oogitdiff [options] [<commit>] [--] [<path>...]\n\n"
+        + "Fast working tree vs commit object differ without requiring ambient git porcelain.\n\n"
+        + "Options:\n"
+        + "  -h, --help           display this help and exit\n"
+        + "  -v, --version        output version information and exit\n"
+        + "      --staged, --cached   view changes staged for the next commit\n"
+        + "      --stat           generate a diffstat summary instead of patch\n"
+        + "  -s, --name-status    show only names and status of changed files\n"
+        + "  -p, --patch          generate diff in patch format (default)\n"
+        + "  -j, --json           output structured JSON metrics\n"
+        + "  -D, --demo           interactive simulated git delta showcase\n"
+        + "      --no-color       suppress ANSI color escape sequences\n"
+        + "      --test           execute internal multi-tier verification suite\n"
+        + "      --mcp            run as Model Context Protocol stdio server\n";
+}
+
+pub fn render_cli_version() -> String {
+    return "oogitdiff 0.2.0 (openOODA sovereign userland)\n";
+}
+
+pub fn parse_cli_options(args: List[String]) -> CliOptions {
+    let mut help_flag: Bool = false;
+    let mut ver_flag: Bool = false;
+    let mut mcp_flag: Bool = false;
+    let mut demo_flag: Bool = false;
+    let mut stat_flag: Bool = false;
+    let mut name_status_flag: Bool = false;
+    let mut patch_flag: Bool = false;
+    let mut json_flag: Bool = false;
+    let mut staged_flag: Bool = false;
+    let mut color_flag: Bool = true;
+    let mut test_flag: Bool = false;
+    let mut target_list: List[String] = list_new();
+
+    let n: Int = list_len(args);
+    let mut i: Int = 0;
+
+    while i < n {
+        let arg: String = list_get(args, i);
+        if arg == "-h" || arg == "--help" {
+            help_flag = true;
+        } else if arg == "-v" || arg == "--version" {
+            ver_flag = true;
+        } else if arg == "--mcp" {
+            mcp_flag = true;
+        } else if arg == "-D" || arg == "--demo" {
+            demo_flag = true;
+        } else if arg == "--stat" {
+            stat_flag = true;
+        } else if arg == "-s" || arg == "--name-status" {
+            name_status_flag = true;
+        } else if arg == "-p" || arg == "--patch" {
+            patch_flag = true;
+        } else if arg == "-j" || arg == "--json" {
+            json_flag = true;
+        } else if arg == "--staged" || arg == "--cached" {
+            staged_flag = true;
+        } else if arg == "--no-color" {
+            color_flag = false;
+        } else if arg == "--test" {
+            test_flag = true;
+        } else if !str_starts_with(arg, "-") {
+            target_list = list_push(target_list, arg);
+        }
+        i = i + 1;
+    }
+
+    return CliOptions {
+        show_help: help_flag,
+        show_version: ver_flag,
+        show_mcp: mcp_flag,
+        show_demo: demo_flag,
+        show_stat: stat_flag,
+        show_name_status: name_status_flag,
+        show_patch: patch_flag,
+        json_output: json_flag,
+        staged_only: staged_flag,
+        use_color: color_flag,
+        run_test: test_flag,
+        targets: target_list
+    };
+}

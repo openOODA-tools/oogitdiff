@@ -1,0 +1,38 @@
+// # Core Subsystem Anchor
+//
+// Logline: Consolidates git data types, ref inspector, staging classifier, and diff engine.
+//
+// Setup: Central entry point for all core git diffing domain operations.
+//
+// Beats:
+//   1. Re-export git delta data structures and factory functions.
+//   2. Re-export git reference discovery and HEAD resolution helpers.
+//   3. Re-export staging index classifier and status querying utilities.
+//   4. Re-export diff engine and unified hunk generators.
+
+import "git_types.oo";
+import "git_ref.oo";
+import "git_index.oo";
+import "diff_engine.oo";
+
+pub fn verify_core_subsystem() -> Bool {
+    let empty_stat: GitDiffStat = make_empty_stat();
+    if empty_stat.total_files != 0 {
+        return false;
+    }
+    if empty_stat.total_additions != 0 {
+        return false;
+    }
+
+    let repo: GitRepoInfo = make_repo_info(".", "refs/heads/main", "deadbeef", true);
+    if repo.head_ref != "refs/heads/main" {
+        return false;
+    }
+
+    let test_lines: List[String] = split_lines("alpha\nbeta\ngamma");
+    if list_len(test_lines) != 3 {
+        return false;
+    }
+
+    return true;
+}

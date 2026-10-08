@@ -1,0 +1,10 @@
+Package: oogitdiff
+Version: 0.2.0-1
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: openOODA-tools <ops@openooda.org>
+Description: GIT TREE DIFF
+ Fast working tree vs commit object differ without requiring ambient git porcelain.
+ Capability-bounded openOODA utility with zero ambient authority,
+ working tree diffing, and native Model Context Protocol (MCP) surface.

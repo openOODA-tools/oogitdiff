@@ -1,0 +1,83 @@
+// # Git Diffstat and Status Renderer
+//
+// Logline: Formats file modification tables, addition/deletion histogram bars, and name-status lists.
+//
+// Setup: Pure tabular string formatter for git change metrics and path status records.
+//
+// Beats:
+//   1. Generate character-histogram bars representing additions and deletions (+/-).
+//   2. Format fixed-column diffstat rows aligning paths, counts, and histogram bars.
+//   3. Render aggregate change summaries (files changed, insertions, deletions).
+//   4. Format git --name-status tabular listings with single-letter state markers.
+
+import "core/git_types.oo";
+
+fn build_hist_bar(adds: Int, dels: Int, max_chars: Int) -> String {
+    let total: Int = adds + dels;
+    if total == 0 {
+        return "";
+    }
+
+    let mut add_chars: Int = adds;
+    let mut del_chars: Int = dels;
+
+    if total > max_chars && max_chars > 0 {
+        add_chars = (adds * max_chars) / total;
+        del_chars = (dels * max_chars) / total;
+        if add_chars == 0 && adds > 0 {
+            add_chars = 1;
+        }
+        if del_chars == 0 && dels > 0 {
+            del_chars = 1;
+        }
+    }
+
+    let mut bar: String = "";
+    let mut i: Int = 0;
+    while i < add_chars {
+        bar = bar + "+";
+        i = i + 1;
+    }
+    let mut j: Int = 0;
+    while j < del_chars {
+        bar = bar + "-";
+        j = j + 1;
+    }
+
+    return bar;
+}
+
+pub fn render_diffstat(stat: GitDiffStat) -> String {
+    let mut out: String = "";
+    let count: Int = list_len(stat.files);
+    let mut i: Int = 0;
+
+    while i < count {
+        let f: GitFileDiff = list_get(stat.files, i);
+        let changes: Int = f.additions + f.deletions;
+        let bar: String = build_hist_bar(f.additions, f.deletions, 20);
+
+        out = out + " " + f.path + " | " + changes.to_string() + " " + bar + "\n";
+        i = i + 1;
+    }
+
+    out = out + " " + stat.total_files.to_string() + " file" + (if stat.total_files == 1 { "" } else { "s" })
+        + " changed, " + stat.total_additions.to_string() + " insertion" + (if stat.total_additions == 1 { "" } else { "s" }) + "(+), "
+        + stat.total_deletions.to_string() + " deletion" + (if stat.total_deletions == 1 { "" } else { "s" }) + "(-)\n";
+
+    return out;
+}
+
+pub fn render_name_status(files: List[GitFileDiff]) -> String {
+    let mut out: String = "";
+    let count: Int = list_len(files);
+    let mut i: Int = 0;
+
+    while i < count {
+        let f: GitFileDiff = list_get(files, i);
+        out = out + f.status + "\t" + f.path + "\n";
+        i = i + 1;
+    }
+
+    return out;
+}

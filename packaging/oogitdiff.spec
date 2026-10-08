@@ -1,5 +1,5 @@
 Name:           oogitdiff
-Version:        0.1.0
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        Fast working tree vs commit object differ without requiring ambient git porcelain.
 License:        ASL 2.0

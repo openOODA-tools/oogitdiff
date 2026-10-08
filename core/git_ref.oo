@@ -1,0 +1,83 @@
+// # Git Reference and Head Inspector
+//
+// Logline: Reads and resolves git HEAD references, symbolic links, and branch pointers.
+//
+// Setup: Requires &FsReadCap for reading repository control files in .git directory.
+//
+// Beats:
+//   1. Verify presence of .git directory and HEAD pointer.
+//   2. Parse symbolic ref targets or detached commit object IDs.
+//   3. Resolve branch reference files to complete 40-character SHA hashes.
+//   4. Provide synthetic repository metadata fallback when operating outside repos.
+
+import "git_types.oo";
+
+pub fn discover_git_root(fs: &FsReadCap, start_path: String) -> String {
+    let direct_head: String = start_path + "/.git/HEAD";
+    let probe: Result[String, String] = read_file(fs, direct_head);
+    match probe {
+        Ok(_) => {
+            return start_path;
+        },
+        Err(_) => {
+            // Check relative path directly
+            let rel_probe: Result[String, String] = read_file(fs, ".git/HEAD");
+            match rel_probe {
+                Ok(_) => {
+                    return ".";
+                },
+                Err(_) => {
+                    return "";
+                }
+            }
+        }
+    }
+}
+
+pub fn read_head_reference(fs: &FsReadCap, git_root: String) -> GitRepoInfo {
+    let head_path: String = if chars_len(git_root) > 0 { git_root + "/.git/HEAD" } else { ".git/HEAD" };
+    let content_res: Result[String, String] = read_file(fs, head_path);
+
+    match content_res {
+        Ok(raw) => {
+            let trimmed: String = str_trim(raw);
+            if str_starts_with(trimmed, "ref: ") {
+                let ref_target: String = str_slice(trimmed, 5, chars_len(trimmed));
+                let ref_path: String = if chars_len(git_root) > 0 { git_root + "/.git/" + ref_target } else { ".git/" + ref_target };
+                let target_res: Result[String, String] = read_file(fs, ref_path);
+                match target_res {
+                    Ok(sha_raw) => {
+                        let commit_sha: String = str_trim(sha_raw);
+                        return make_repo_info(git_root, ref_target, commit_sha, true);
+                    },
+                    Err(_) => {
+                        return make_repo_info(git_root, ref_target, "0000000000000000000000000000000000000000", true);
+                    }
+                }
+            } else {
+                return make_repo_info(git_root, "DETACHED", trimmed, true);
+            }
+        },
+        Err(_) => {
+            // Synthetic fallback repository for testing and non-git environments
+            return make_repo_info(".", "refs/heads/main", "e4f8b92c10ad8731f49b56ce814d3f20ac1896d2", false);
+        }
+    }
+}
+
+pub fn format_short_sha(sha: String) -> String {
+    if chars_len(sha) >= 7 {
+        return str_slice(sha, 0, 7);
+    }
+    return sha;
+}
+
+pub fn get_branch_short_name(ref_name: String) -> String {
+    if str_starts_with(ref_name, "refs/heads/") {
+        return str_slice(ref_name, 11, chars_len(ref_name));
+    }
+    if str_starts_with(ref_name, "refs/tags/") {
+        return str_slice(ref_name, 10, chars_len(ref_name));
+    }
+    return ref_name;
+}

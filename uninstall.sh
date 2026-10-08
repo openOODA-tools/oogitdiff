@@ -4,7 +4,7 @@
 # "Removes oogitdiff binary, package installations, and cache."
 #
 # Usage:
-#   curl -fsSL https://openooda-toogitdiff.github.io/oogitdiff/uninstall.sh | bash
+#   curl -fsSL https://openooda-tools.github.io/oogitdiff/uninstall.sh | bash
 #   or: ./uninstall.sh [options]
 #
 # Options:

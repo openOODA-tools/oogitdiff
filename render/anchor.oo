@@ -1,0 +1,36 @@
+// # Render Subsystem Anchor
+//
+// Logline: Consolidates patch formatting, diffstats, JSON serialization, and demo showcase.
+//
+// Setup: Central entry point for all formatting and presentation operations in oogitdiff.
+//
+// Beats:
+//   1. Re-export unified diff patch formatter and ANSI color engine.
+//   2. Re-export diffstat table and character histogram generator.
+//   3. Re-export JSON serializers for CLI structured mode and MCP responses.
+//   4. Re-export interactive repository delta showcase builder.
+
+import "render_patch.oo";
+import "render_stat.oo";
+import "render_json.oo";
+import "render_demo.oo";
+
+pub fn verify_render_subsystem() -> Bool {
+    let demo_files: List[GitFileDiff] = generate_demo_files();
+    if list_len(demo_files) != 3 {
+        return false;
+    }
+
+    let patch_text: String = render_single_file_patch(list_get(demo_files, 0), false);
+    if chars_len(patch_text) == 0 {
+        return false;
+    }
+
+    let stat: GitDiffStat = accumulate_diffstat(demo_files);
+    let json_text: String = diffstat_to_json(stat);
+    if chars_len(json_text) == 0 {
+        return false;
+    }
+
+    return true;
+}

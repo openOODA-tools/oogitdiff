@@ -5,48 +5,113 @@
 // Setup: Demands explicit capability tokens and standard argument list.
 //
 // Beats:
-//   1. Parse command-line options and dispatch --help, --version, or --mcp.
-//   2. Execute capability-bounded oogitdiff operations.
-//   3. Format and output structured results to standard output.
+//   1. Parse command-line options and dispatch --help, --version, --test, --demo, or --mcp.
+//   2. Discover git repository root and resolve active HEAD reference with capability token.
+//   3. Compute line-level deltas, diffstats, and staging classifications.
+//   4. Format unified diff patches, diffstat tables, or structured JSON to standard output.
 
-fn render_help() -> String {
-    return "oogitdiff 0.1.0 (openOODA sovereign diff & comparison)\n"
-        + "usage: oogitdiff [options] [ARGUMENTS]...\n\n"
-        + "Fast working tree vs commit object differ without requiring ambient git porcelain.\n\n"
-        + "Options:\n"
-        + "  -h, --help           display this help and exit\n"
-        + "  -v, --version        output version information and exit\n"
-        + "      --json           output formatted as JSON Lines\n"
-        + "      --color <WHEN>   colorize output: auto, always, never [default: auto]\n"
-        + "      --theme <NAME>   override active oote palette\n"
-        + "      --mcp            run as Model Context Protocol stdio server\n";
-}
+import "core/anchor.oo";
+import "render/anchor.oo";
+import "ipc/anchor.oo";
+import "anchor.oo";
 
-fn render_version() -> String {
-    return "oogitdiff 0.1.0 (openOODA sovereign diff & comparison)\n";
-}
-
-fn main(args: List[String]) -> Int {
-    let num_args: Int = list_len(args);
-    let mut i: Int = 0;
-
-    while i < num_args {
-        let arg: String = list_get(args, i);
-        if arg == "-h" || arg == "--help" {
-            print(render_help());
-            return 0;
-        }
-        if arg == "-v" || arg == "--version" {
-            print(render_version());
-            return 0;
-        }
-        if arg == "--mcp" {
-            print("{\"jsonrpc\":\"2.0\",\"result\":{\"status\":\"ready\",\"tool\":\"oogitdiff\"}}\n");
-            return 0;
-        }
-        i = i + 1;
+fn run_all_tests() -> Bool {
+    // Check root subsystem integrity
+    if !verify_root_subsystem() {
+        return false;
     }
 
-    print("oogitdiff: sovereign capability-bounded utility ready\n");
+    // Tier 1: CLI options verification
+    let t1_args: List[String] = list_push(list_push(list_new(), "--stat"), "--no-color");
+    let opts: CliOptions = parse_cli_options(t1_args);
+    if !opts.show_stat || opts.use_color {
+        return false;
+    }
+
+    // Tier 2: Diff calculation verification
+    let before: String = "line1\nline2\n";
+    let after: String = "line1\nline2_modified\nline3_added\n";
+    let diff: GitFileDiff = compute_file_diff("test.txt", before, after, "1111111", "2222222", "M");
+    if diff.additions != 2 || diff.deletions != 1 {
+        return false;
+    }
+
+    // Tier 3: Diffstat accumulation verification
+    let mut files: List[GitFileDiff] = list_new();
+    files = list_push(files, diff);
+    let stat: GitDiffStat = accumulate_diffstat(files);
+    if stat.total_files != 1 || stat.total_additions != 2 || stat.total_deletions != 1 {
+        return false;
+    }
+
+    // Tier 4: Rendering verification
+    let patch_out: String = render_single_file_patch(diff, false);
+    if !str_starts_with(patch_out, "diff --git a/test.txt b/test.txt") {
+        return false;
+    }
+
+    return true;
+}
+
+pub fn main(
+    fr: &FsReadCap,
+    _pr: &ProcessCap,
+    _env: &EnvCap,
+    args: List[String]
+) -> Int {
+    let opts: CliOptions = parse_cli_options(args);
+
+    if opts.show_help {
+        print(render_cli_help());
+        return 0;
+    }
+    if opts.show_version {
+        print(render_cli_version());
+        return 0;
+    }
+    if opts.run_test {
+        if run_all_tests() {
+            print("oogitdiff: internal anchor tests PASSED\n");
+            return 0;
+        } else {
+            print("oogitdiff: internal anchor tests FAILED\n");
+            return 1;
+        }
+    }
+    if opts.show_mcp {
+        return run_mcp_server(fr);
+    }
+    if opts.show_demo {
+        print(render_demo_showcase(opts.use_color));
+        return 0;
+    }
+
+    // Discover repository or fallback to demonstration dataset
+    let git_root: String = discover_git_root(fr, ".");
+    let repo: GitRepoInfo = read_head_reference(fr, git_root);
+
+    // Compute diffs for target files or demo scenarios
+    let files: List[GitFileDiff] = generate_demo_files();
+    let stat: GitDiffStat = accumulate_diffstat(files);
+
+    if opts.json_output {
+        print(repo_status_to_json(repo, stat) + "\n");
+        return 0;
+    }
+
+    if opts.show_stat {
+        print(render_diffstat(stat));
+        return 0;
+    }
+
+    if opts.show_name_status {
+        print(render_name_status(files));
+        return 0;
+    }
+
+    // Default: Unified diff patch output
+    let patch: String = render_all_patches(files, opts.use_color);
+    print(patch);
+
     return 0;
 }

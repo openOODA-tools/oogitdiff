@@ -1,0 +1,103 @@
+// # Git Patch Unified Diff Renderer
+//
+// Logline: Formats git deltas into standard unified diff patches with ANSI terminal color styling.
+//
+// Setup: Pure string formatter rendering git file diffs and hunk structures.
+//
+// Beats:
+//   1. Build ANSI color sequences for additions, deletions, and hunk coordinates.
+//   2. Format git metadata headers (diff --git, index hashes, and file modes).
+//   3. Render unified diff coordinates and prefixed line records (+, -, space).
+//   4. Support complete suppression of ANSI escape codes under no-color modes.
+
+import "core/git_types.oo";
+
+fn ansi_esc() -> String {
+    return bytes_to_str(bytes_push(bytes_new(), 27));
+}
+
+fn color_green(text: String, use_color: Bool) -> String {
+    if !use_color { return text; }
+    return ansi_esc() + "[32m" + text + ansi_esc() + "[0m";
+}
+
+fn color_red(text: String, use_color: Bool) -> String {
+    if !use_color { return text; }
+    return ansi_esc() + "[31m" + text + ansi_esc() + "[0m";
+}
+
+fn color_cyan(text: String, use_color: Bool) -> String {
+    if !use_color { return text; }
+    return ansi_esc() + "[36m" + text + ansi_esc() + "[0m";
+}
+
+fn color_bold(text: String, use_color: Bool) -> String {
+    if !use_color { return text; }
+    return ansi_esc() + "[1m" + text + ansi_esc() + "[0m";
+}
+
+pub fn render_single_file_patch(diff: GitFileDiff, use_color: Bool) -> String {
+    let mut out: String = "";
+
+    // Header: diff --git a/path b/path
+    let git_hdr: String = "diff --git a/" + diff.path + " b/" + diff.path + "\n";
+    out = out + color_bold(git_hdr, use_color);
+
+    if diff.status == "A" {
+        out = out + "new file mode " + diff.new_mode + "\n";
+    } else if diff.status == "D" {
+        out = out + "deleted file mode " + diff.old_mode + "\n";
+    }
+
+    let idx_hdr: String = "index " + diff.old_sha + ".." + diff.new_sha + " " + diff.new_mode + "\n";
+    out = out + idx_hdr;
+
+    let src_hdr: String = if diff.status == "A" { "--- /dev/null\n" } else { "--- a/" + diff.path + "\n" };
+    let dst_hdr: String = if diff.status == "D" { "+++ /dev/null\n" } else { "+++ b/" + diff.path + "\n" };
+    out = out + color_bold(src_hdr, use_color);
+    out = out + color_bold(dst_hdr, use_color);
+
+    let n_hunks: Int = list_len(diff.hunks);
+    let mut hi: Int = 0;
+
+    while hi < n_hunks {
+        let hunk: GitDiffHunk = list_get(diff.hunks, hi);
+        let coord: String = "@@ -" + hunk.old_start.to_string() + "," + hunk.old_count.to_string()
+            + " +" + hunk.new_start.to_string() + "," + hunk.new_count.to_string() + " @@\n";
+        out = out + color_cyan(coord, use_color);
+
+        let n_lines: Int = list_len(hunk.lines);
+        let mut li: Int = 0;
+        while li < n_lines {
+            let line: GitDiffLine = list_get(hunk.lines, li);
+            if line.line_type == 1 {
+                // Added
+                out = out + color_green("+" + line.content + "\n", use_color);
+            } else if line.line_type == 2 {
+                // Deleted
+                out = out + color_red("-" + line.content + "\n", use_color);
+            } else {
+                // Context
+                out = out + " " + line.content + "\n";
+            }
+            li = li + 1;
+        }
+        hi = hi + 1;
+    }
+
+    return out;
+}
+
+pub fn render_all_patches(files: List[GitFileDiff], use_color: Bool) -> String {
+    let mut out: String = "";
+    let count: Int = list_len(files);
+    let mut i: Int = 0;
+
+    while i < count {
+        let f: GitFileDiff = list_get(files, i);
+        out = out + render_single_file_patch(f, use_color);
+        i = i + 1;
+    }
+
+    return out;
+}
